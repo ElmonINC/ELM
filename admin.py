@@ -9,7 +9,7 @@ from update import run_update_check   # update check module
 
 APP_VERSION = "1.0"
 BROADCAST_PORT = 50000
-DEFAULT_TOKEN = "SgiVeDLUQsZ9PnY4ERxkLWjBmLfuA5"  # simple authentication key
+DEFAULT_TOKEN = "SgiVeDLUQsZ9PnY4ERxkLWjBmLfuA5" # simple authentication key
 
 def main():
     run_update_check(APP_VERSION)
