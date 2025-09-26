@@ -1,6 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
 a = Analysis(
     ['admin.py'],
     pathex=[],
@@ -10,9 +9,24 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Exclude unnecessary big modules
+    excludes=[
+        'numpy',
+        'pandas',
+        'scipy',
+        'matplotlib',
+        'PyQt5',
+        'PySide6',
+        'setuptools',
+        'pkg_resources',
+        'tests',
+        'tkinter.test',
+        'email',
+        'http',
+        'xml',
+    ],
     noarchive=False,
-    optimize=0,
+    optimize=2,  # adds bytecode optimization
 )
 pyz = PYZ(a.pure)
 
@@ -25,8 +39,8 @@ exe = EXE(
     name='admin',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
+    strip=True,      # strip symbols from exe
+    upx=True,        # compress with UPX
     upx_exclude=[],
     runtime_tmpdir=None,
     console=True,
@@ -35,5 +49,4 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['logo.ico'],
 )

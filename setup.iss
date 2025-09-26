@@ -17,27 +17,28 @@ SetupIconFile=logo.ico
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Additional icons:"; Flags: unchecked
-Name: "startup"; Description: "Run Client on Windows startup"; GroupDescription: "Startup options:"; Flags: unchecked exclusive
+; Admin can choose extra icons
+Name: "desktopicon"; Description: "Create a desktop icon (Admin only)"; GroupDescription: "Additional icons:"; Flags: unchecked; Check: IsAdmin
 
 [Files]
-; Admin exe
-Source: "dist\admin.exe"; DestDir: "{app}"; DestName: "admin.exe"; Flags: ignoreversion
-; Client exe
-Source: "dist\client.exe"; DestDir: "{app}"; DestName: "client.exe"; Flags: ignoreversion
-; Logo
-Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
+; Admin exe (only if Admin selected)
+Source: "dist\admin.exe"; DestDir: "{app}"; DestName: "admin.exe"; Flags: ignoreversion; Check: IsAdmin
+
+; Client exe (only if Client selected)
+Source: "dist\client.exe"; DestDir: "{app}"; DestName: "client.exe"; Flags: ignoreversion; Check: IsClient
+
+; Logo (only if Admin, client runs silently)
+Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion; Check: IsAdmin
 
 [Icons]
-; Desktop shortcut for Admin
+; Desktop shortcut for Admin only
 Name: "{autodesktop}\ELM Admin"; Filename: "{app}\admin.exe"; Tasks: desktopicon; Check: IsAdmin
-; Desktop shortcut for Client
-Name: "{autodesktop}\ELM Client"; Filename: "{app}\client.exe"; Tasks: desktopicon; Check: IsClient
-; Startup shortcut for Client (auto-run)
+
+; Startup shortcut for Client (always autorun for all users, no option)
 Name: "{commonstartup}\ELM Client"; Filename: "{app}\client.exe"; Check: IsClient
 
 [Run]
-; Run Admin immediately after install (only if Admin selected)
+; Run Admin immediately after install
 Filename: "{app}\admin.exe"; Description: "Launch ELM Admin"; Flags: nowait postinstall; Check: IsAdmin
 
 [Code]

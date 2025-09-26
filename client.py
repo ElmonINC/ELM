@@ -15,7 +15,7 @@ from update import run_update_check
 
 APP_VERSION = "1.1"
 BROADCAST_PORT = 50000
-DEFAULT_TOKEN = "SgiVeDLUQsZ9"  # simple authentication key
+DEFAULT_TOKEN = "SgiVeDLUQsZ9PnY4ERxkLWjBmLfuA5"  # simple authentication key
 POPUP_DURATION = 60  # seconds
 
 
@@ -71,17 +71,17 @@ class GlassPopup:
 
         # Buttons
         btn_frame = ttk.Frame(self.frame)
-        btn_frame.pack(fill="x", pady=(10, 0))
+        btn_frame.pack(fill="x", pady=(4, 0))
 
         close_latest = ttk.Button(
-            btn_frame, text="❌", style="warning.TButton", command=self.close_latest
+            btn_frame, text="❌", style="warning.TButton", command=self.close_latest, width=3
         )
-        close_latest.pack(side="left", expand=True, padx=5)
+        close_latest.pack(side="left", expand=True, padx=1)
 
         close_all = ttk.Button(
-            btn_frame, text="🗑", style="danger.TButton", command=self.close_all
+            btn_frame, text="🗑", style="danger.TButton", command=self.close_all, width=3
         )
-        close_all.pack(side="right", expand=True, padx=5)
+        close_all.pack(side="right", expand=True, padx=1)
 
         # Position center
         self.top.update_idletasks()
@@ -100,7 +100,7 @@ class GlassPopup:
             text=message,
             wraplength=400,
             justify="left",
-            font=("Segoe UI", 11),
+            font=("Segoe UI", 14),
             foreground="white",
             background="#1a1a1a"
         )
@@ -120,17 +120,26 @@ class GlassPopup:
             self._destroy_popup()
 
     def close_all(self):
-        # Terminate timer instantly
+        # Cancel timer immediately
         if self.close_timer:
-            self.top.after_cancel(self.close_timer)
+            try:
+                self.top.after_cancel(self.close_timer)
+            except Exception:
+                pass
             self.close_timer = None
 
-        # Remove all messages
+        # Destroy all message labels
         for lbl in self.messages:
-            lbl.destroy()
+            try:
+                lbl.destroy()
+            except Exception:
+                pass
         self.messages.clear()
 
-        self._destroy_popup()
+        # Forcefully destroy popup if it still exists
+        if self.top and tk.Toplevel.winfo_exists(self.top):
+            self.top.destroy()
+        self.top = None
 
     def _destroy_popup(self):
         if self.top:
