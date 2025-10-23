@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+
 a = Analysis(
     ['client.py'],
     pathex=[],
@@ -9,22 +10,10 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[
-        'numpy',
-        'pandas',
-        'scipy',
-        'matplotlib',
-        'PyQt5',
-        'PySide6',
-        'setuptools',
-        'pkg_resources',
-        'cryptography',
-        'asyncio',
-    ],
+    excludes=[],
     noarchive=False,
-    optimize=2,   # enable optimization
+    optimize=0,
 )
-
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -36,8 +25,8 @@ exe = EXE(
     name='client',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,      # <--- strip symbols to reduce size
-    upx=True,        # <--- compress with UPX
+    strip=False,
+    upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -46,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['logo.ico'],
 )

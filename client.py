@@ -15,7 +15,7 @@ from update import run_update_check
 
 APP_VERSION = "1.1"
 BROADCAST_PORT = 50000
-DEFAULT_TOKEN = "SgiVeDLUQsZ9PnY4ERxkLWjBmLfuA5"  # simple authentication key
+DEFAULT_TOKEN = "SgiVeDLUQsZ9PnY4ERxkLWjBmLfuA5"    # simple authentication key
 POPUP_DURATION = 60  # seconds
 
 
@@ -74,12 +74,12 @@ class GlassPopup:
         btn_frame.pack(fill="x", pady=(4, 0))
 
         close_latest = ttk.Button(
-            btn_frame, text="❌", style="warning.TButton", command=self.close_latest, width=3
+            btn_frame, text="❌", style="warning.TButton", command=self.close_latest, width=2
         )
         close_latest.pack(side="left", expand=True, padx=1)
 
         close_all = ttk.Button(
-            btn_frame, text="🗑", style="danger.TButton", command=self.close_all, width=3
+            btn_frame, text="🗑", style="danger.TButton", command=self.close_all, width=2
         )
         close_all.pack(side="right", expand=True, padx=1)
 
