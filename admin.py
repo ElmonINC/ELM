@@ -31,8 +31,6 @@ def show_logo():
 
     console.print(Panel.fit(logo_text, title="ELM", border_style="cyan", box=box.DOUBLE))
 
-
-
 def main():
     """Admin console loop"""
     console.clear()

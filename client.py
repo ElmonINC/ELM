@@ -243,9 +243,9 @@ class GlassPopup:
                 self.top = None
 
 
-# ==========================
+# =====================================
 # Listener
-# ==========================
+# =====================================
 class ClientListener:
     def __init__(self, root, popup, token=DEFAULT_TOKEN, port=BROADCAST_PORT):
         self.root = root
