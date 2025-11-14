@@ -1,20 +1,48 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+block_cipher = None
 
 a = Analysis(
     ['admin.py'],
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=[],
+    hiddenimports=[
+        'pynput',
+        'pynput.keyboard',
+        'pynput.keyboard._win32',
+        'pynput.keyboard._darwin',
+        'pynput.keyboard._xorg',
+        'rich',
+        'rich.console',
+        'rich.prompt',
+        'rich.panel',
+        'rich.text',
+        'rich.box',
+        'cryptography',
+        'cryptography.fernet',
+        'cryptography.hazmat.primitives',
+        'cryptography.hazmat.primitives.hashes',
+        'cryptography.hazmat.primitives.kdf.pbkdf2',
+        'cryptography.hazmat.backends',
+        'cryptography.hazmat.backends.openssl',
+        'hmac',
+        'hashlib',
+        'secrets',
+        'json',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
     noarchive=False,
     optimize=0,
 )
-pyz = PYZ(a.pure)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
@@ -22,7 +50,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='admin',
+    name='ELM-admin',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,5 +63,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['logo.ico'],
+    icon='logo.ico',
 )

@@ -38,9 +38,31 @@ Name: "{commonstartup}\ELM Client"; Filename: "{app}\client.exe"; Check: IsClien
 ; Run Admin immediately after install (only if Admin selected)
 Filename: "{app}\admin.exe"; Description: "Launch ELM Admin"; Flags: nowait postinstall; Check: IsAdmin
 
+[UninstallRun]
+; Try to stop the Admin process if it's running so files can be removed
+Filename: "taskkill.exe"; Parameters: "/IM admin.exe /F"; Flags: runhidden
+
+[UninstallDelete]
+; Remove the Admin executable specifically. Do not forcibly delete the whole
+; application folder because Client may be installed in the same directory.
+Type: files; Name: "{app}\admin.exe"
+; Remove the application folder if it became empty after deleting files
+Type: dirifempty; Name: "{app}"
+
 [Code]
 var
   InstallTypePage: TInputOptionWizardPage;
+
+// Utility: returns the selected role index or -1 when unknown/not yet created.
+function RoleSelectedIndex(): Integer;
+begin
+  if not Assigned(InstallTypePage) then
+  begin
+    Result := -1;
+    exit;
+  end;
+  Result := InstallTypePage.SelectedValueIndex;
+end;
 
 procedure InitializeWizard;
 begin
@@ -58,66 +80,57 @@ begin
   { Hide the Tasks list when Admin role is selected }
   if CurPageID = wpSelectTasks then
   begin
-    if Assigned(InstallTypePage) and (InstallTypePage.SelectedValueIndex = 0) then
-      WizardForm.TasksList.Visible := False
-    else
-      WizardForm.TasksList.Visible := True;
+    // Guard: WizardForm may not be available in very early calls
+    if Assigned(WizardForm) then
+    begin
+      if RoleSelectedIndex() = 0 then
+        WizardForm.TasksList.Visible := False
+      else
+        WizardForm.TasksList.Visible := True;
+    end;
   end;
 end;
 
 function IsAdmin: Boolean;
 begin
-  Result := InstallTypePage.SelectedValueIndex = 0;
+  Result := (RoleSelectedIndex() = 0);
 end;
 
 function IsClient: Boolean;
 begin
-  Result := InstallTypePage.SelectedValueIndex = 1;
+  Result := (RoleSelectedIndex() = 1);
 end;
 
-function IsProcessRunning(ProcName: String): Boolean;
-var
-  ResultCode: Integer;
-  Cmd: String;
-begin
-  // Use cmd.exe /C with piping to find to get an exit code we can check.
-  // Escape the pipe with ^ so cmd.exe receives it correctly.
-  Cmd := '/C tasklist /FI "IMAGENAME eq ' + ProcName + '" ^| find /I "' + ProcName + '" >NUL';
-  if Exec('cmd.exe', Cmd, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    Result := (ResultCode = 0)
-  else
-    Result := False;
-end;
+// Process-check helper removed. We don't rely on running process detection in
+// the installer; instead we check for already-installed component files.
 
 function InitializeSetup(): Boolean;
 begin
-  // Only block installation if the component being installed is currently running.
-  // This allows installing Admin and Client on the same machine (so long as
-  // the specific component is not running during its own install).
+  // If role selection is not available (e.g. silent/automated run), allow
+  // the installer to proceed — selection should be provided via command line
+  // switches or default behavior in that case.
+  if RoleSelectedIndex() = -1 then
+  begin
+    Result := True;
+    exit;
+  end;
+
+  // Only cancel installation when the exact component file for the selected
+  // role already exists in expected install locations.
   if IsAdmin then
   begin
-    if IsProcessRunning('admin.exe') then
+    if FileExists(ExpandConstant('{autopf}\ELM\admin.exe')) or FileExists(ExpandConstant('{commonappdata}\ELM\admin.exe')) then
     begin
-      MsgBox('ELM Admin is currently running. Please close admin.exe before installing the Admin component.', mbError, MB_OK);
+      MsgBox('ELM Admin is already installed on this computer. The Admin installation will be canceled.', mbInformation, MB_OK);
       Result := False;
       exit;
     end;
   end
   else if IsClient then
   begin
-    if IsProcessRunning('client.exe') then
+    if FileExists(ExpandConstant('{autopf}\ELM\client.exe')) or FileExists(ExpandConstant('{commonappdata}\ELM\client.exe')) then
     begin
-      MsgBox('ELM Client is currently running. Please close client.exe before installing the Client component.', mbError, MB_OK);
-      Result := False;
-      exit;
-    end;
-  end;
-
-  // If install directory already exists, confirm overwrite
-  if DirExists(ExpandConstant('{autopf}\ELM')) or DirExists(ExpandConstant('{commonappdata}\ELM')) then
-  begin
-    if MsgBox('ELM appears to already be installed on this computer. Do you want to continue and overwrite existing installation?', mbConfirmation, MB_YESNO) = IDNO then
-    begin
+      MsgBox('ELM Client is already installed on this computer. The Client installation will be canceled.', mbInformation, MB_OK);
       Result := False;
       exit;
     end;
