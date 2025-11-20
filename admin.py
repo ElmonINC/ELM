@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from rich.console import Console
 from rich.prompt import Prompt
 from rich.panel import Panel
