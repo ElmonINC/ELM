@@ -24,6 +24,7 @@ Thumbs.db
 # Installer leftovers
 .iss~
 .exe
+.json
 
 # Local backup/mirror created during maintenance - do not commit
 ELM-mirror.git/
@@ -31,3 +32,4 @@ ELM-mirror.git/
 # Installer binaries (large files)
 Output/ELMSetup.exe
 Setup/ELMSetup.exe
+

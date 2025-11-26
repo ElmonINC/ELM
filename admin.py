@@ -26,6 +26,7 @@ console = Console()
 
 # Attempt to import hotkey library (optional; gracefully degrade if not available)
 HOTKEY_AVAILABLE = False
+hotkey_listener = None  # Global reference to keep listener alive
 try:
     from pynput import keyboard as kb
     HOTKEY_AVAILABLE = True
@@ -34,10 +35,27 @@ except ImportError:
 
 
 class SecureMessageSystem:
-    """Handles all encryption and authentication"""
-    
     def __init__(self):
-        self.config_path = Path(CONFIG_FILE)
+        # 1. Detect the correct system path for data
+        if os.name == 'nt':
+            # Windows: %APPDATA% (C:\Users\Name\AppData\Roaming)
+            base_path = Path(os.getenv('APPDATA'))
+        else:
+            # Linux/Mac: ~/.config
+            base_path = Path.home() / ".config"
+            
+        # 2. Define a dedicated folder for your app
+        self.app_dir = base_path / "ELM_Secure_Admin"
+        
+        # 3. Create that folder if it doesn't exist
+        try:
+            self.app_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            console.print(f"[red]Error creating config directory: {e}[/red]")
+            
+        # 4. Set the final file path
+        self.config_path = self.app_dir / "admin_config.json"
+        
         self.secret_key = None
         self.cipher = None
         self.load_or_create_config()
@@ -60,10 +78,11 @@ class SecureMessageSystem:
         self.cipher = Fernet(self.secret_key)
     
     def create_new_config(self):
-        """Generate cryptographically secure credentials"""
+        """Generate cryptographically secure credentials with guaranteed randomness"""
         console.print("[yellow]Creating new secure configuration...[/yellow]")
         
-        # Generate a cryptographically secure key
+        # Generate a cryptographically secure key using Fernet (uses os.urandom internally)
+        # Guaranteed random key generation on every call
         self.secret_key = Fernet.generate_key()
         
         # Save to config file with restrictive permissions
@@ -73,12 +92,20 @@ class SecureMessageSystem:
             'version': '2.0'
         }
         
-        with open(self.config_path, 'w') as f:
-            json.dump(config, f, indent=2)
+        try:
+            with open(self.config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+
+            if os.name != 'nt': # Set file permissions (read/write for owner only)
+                os.chmod(self.config_path, 0o600) # Unix-like systems
+                
+            console.print(f"[green]✓[/green] Config saved to: {self.config_path}")
+        except Exception as e:
+            # Added safety catch so the user sees why it failed
+            console.print(f"[bold red]CRITICAL ERROR: Could not write config file![/bold red]")
+            console.print(f"Path: {self.config_path}")
+            console.print(f"Error: {e}")
         
-        # Set file permissions (read/write for owner only)
-        if os.name != 'nt':  # Unix-like systems
-            os.chmod(self.config_path, 0o600)
         
         console.print(f"[green]✓[/green] Created secure configuration at: {self.config_path.absolute()}")
         console.print("[bold yellow]IMPORTANT:[/bold yellow] Share this config file securely with authorized receivers!")
@@ -191,6 +218,8 @@ def show_logo():
 
 def setup_hotkey():
     """Setup global hotkey Alt+Ctrl+E to activate the admin console."""
+    global hotkey_listener
+    
     if not HOTKEY_AVAILABLE:
         console.print("[yellow][NOTE][/yellow] Global hotkey disabled (install 'pynput' package to enable)", style="dim")
         return
@@ -206,15 +235,16 @@ def setup_hotkey():
             on_activate
         )
         
-        # Start listener
+        # Start listener with global reference to prevent garbage collection
         def for_canonical(f):
-            return lambda k: f(listener.canonical(k))
+            return lambda k: f(hotkey_listener.canonical(k))
         
-        listener = kb.Listener(
+        # Create and store listener globally so it stays alive
+        hotkey_listener = kb.Listener(
             on_press=for_canonical(hotkey.press),
             on_release=for_canonical(hotkey.release)
         )
-        listener.start()
+        hotkey_listener.start()
         
         console.print("[green]✓[/green] Global hotkey (Alt+Ctrl+E) registered", style="dim")
     except Exception as e:

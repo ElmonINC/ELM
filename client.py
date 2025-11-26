@@ -58,10 +58,25 @@ class SecureMessageSystem:
     """Handles persistent key storage and decryption"""
     
     def __init__(self):
-        # Store key in Hidden AppData folder (User specific)
-        # This mimics "hardcoding" as it persists across reboots/moves
-        self.app_data_dir = Path(os.getenv('LOCALAPPDATA')) / "ELM_Client"
+        # --- AMENDMENT: Aligning Path Logic with Fixed admin.py ---
+        if os.name == 'nt':
+            # Windows: APPDATA is typically used for roaming/shared configuration
+            base_path = Path(os.getenv('APPDATA'))
+        else:
+            # Linux/Mac support (Optional, but good practice)
+            base_path = Path.home() / ".config"
+
+        # Client uses its own dedicated folder separate from the admin config folder
+        self.app_data_dir = base_path / "ELM_Client_Config"
         self.key_file = self.app_data_dir / "security.secret"
+        # -----------------------------------------------------------
+        
+        self.secret_key = None
+        self.cipher = None
+        
+        # Ensure directory exists
+        self.app_data_dir.mkdir(parents=True, exist_ok=True)
+        # ... (rest of the __init__ remains the same)
         
         self.secret_key = None
         self.cipher = None
@@ -69,14 +84,14 @@ class SecureMessageSystem:
         # Ensure directory exists
         self.app_data_dir.mkdir(parents=True, exist_ok=True)
         
-        # Load or Install
+        # ALWAYS run setup wizard on first run or if key is missing
         if not self.key_file.exists():
             self._run_installation_wizard()
         else:
             self._load_key()
 
     def _run_installation_wizard(self):
-        """GUI for First-Time Setup"""
+        """GUI for First-Time Setup - ALWAYS prompt for secret key"""
         wizard = tb.Window(themename="cyborg")
         wizard.title("ELM Client Setup")
         
@@ -90,7 +105,7 @@ class SecureMessageSystem:
         lbl_header = ttk.Label(wizard, text="🔐 Security Configuration", font=("Segoe UI", 16, "bold"), bootstyle="info")
         lbl_header.pack(pady=20)
         
-        lbl_instr = ttk.Label(wizard, text="Please enter the Admin Key to authorize this computer.\nYou can paste the key text OR select the config file.", justify="center")
+        lbl_instr = ttk.Label(wizard, text="Please enter the Admin Secret Key to authorize this computer.\nYou can paste the key text OR select the admin config file.", justify="center")
         lbl_instr.pack(pady=10)
         
         # Entry Field
@@ -102,8 +117,9 @@ class SecureMessageSystem:
         btn_frame.pack(pady=20)
         
         def browse_file():
+            """Browse for admin_config.json file"""
             filename = filedialog.askopenfilename(
-                title="Select Admin Config",
+                title="Select Admin Config File",
                 filetypes=[("JSON Config", "*.json"), ("All Files", "*.*")],
                 parent=wizard
             )
@@ -114,30 +130,45 @@ class SecureMessageSystem:
                         if 'secret_key' in data:
                             self.key_entry.delete(0, tk.END)
                             self.key_entry.insert(0, data['secret_key'])
+                            print(f"[SECURE] Loaded key from {filename}")
                         else:
-                            messagebox.showerror("Error", "Invalid file format", parent=wizard)
+                            messagebox.showerror("Error", "Invalid config file - missing 'secret_key'", parent=wizard)
                 except Exception as e:
                     messagebox.showerror("Error", f"Could not read file: {e}", parent=wizard)
 
         def install_key():
+            """Validate and hardcode the key"""
             key_candidate = self.key_entry.get().strip()
             if not key_candidate:
                 messagebox.showwarning("Input Required", "Please enter a key or select a file.", parent=wizard)
                 return
                 
             try:
-                # Validate Key Format
+                # Validate Key Format (must be valid Fernet key)
                 Fernet(key_candidate.encode())
                 
-                # Save to hidden file
+                # Save to hidden file (hardcoded persistence)
                 with open(self.key_file, 'w') as f:
                     f.write(key_candidate)
                 
-                messagebox.showinfo("Success", "Configuration Installed Successfully!\nThe app will now start.", parent=wizard)
+                # Save to hidden file (hardcoded persistence)
+                with open(self.key_file, 'w') as f:
+                    f.write(key_candidate)
+
+                # Set restrictive file permissions on Windows
+                if os.name == 'nt':
+                    try:
+                        import stat
+                        os.chmod(self.key_file, stat.S_IRUSR | stat.S_IWUSR)
+                    except:
+                        pass
+                
+                print(f"[SECURE] Key hardcoded to {self.key_file}")
+                messagebox.showinfo("Success", "Security Key Installed Successfully!\nThe app will now start.", parent=wizard)
                 wizard.destroy()
                 
-            except Exception:
-                messagebox.showerror("Invalid Key", "The key provided is invalid.\nPlease check your input.", parent=wizard)
+            except Exception as e:
+                messagebox.showerror("Invalid Key", f"The key provided is invalid.\nError: {str(e)}", parent=wizard)
 
         btn_browse = ttk.Button(btn_frame, text="📂 Select Config File", bootstyle="secondary", command=browse_file)
         btn_browse.pack(side="left", padx=5)
@@ -157,6 +188,7 @@ class SecureMessageSystem:
                 key_data = f.read().strip()
                 self.secret_key = key_data.encode()
             self.cipher = Fernet(self.secret_key)
+            print("[SECURE] Loaded hardcoded key from local storage")
         except Exception:
             # If file is corrupt, delete it and restart wizard
             try: os.remove(self.key_file) 
@@ -254,11 +286,13 @@ class GlassPopup:
         self.frame = ttk.Frame(border, padding=20, style="Glass.TFrame")
         self.frame.pack(fill="both", expand=True)
 
-        ttk.Label(self.frame, text="🔒 URGENT MESSAGE", font=("Segoe UI", 10, "bold"), 
+        ttk.Label(self.frame, text="🔒 ENCRYTED MESSAGE", font=("Segoe UI", 10, "bold"), 
                  foreground="#ff3333", background="#1a1a1a").pack(anchor="w", pady=(0, 10))
 
         btn_frame = ttk.Frame(self.frame)
         btn_frame.pack(fill="x", pady=(10, 0))
+        ttk.Button(btn_frame, text="Close All", style="danger.TButton", 
+                  command=self.close_all).pack(side="right", padx=2)
         ttk.Button(btn_frame, text="Dismiss", style="warning.TButton", 
                   command=self.close_latest).pack(side="right", padx=2)
 
@@ -390,21 +424,30 @@ def acquire_single_instance():
 def main():
     # Prevent multiple instances
     ok, reason = acquire_single_instance()
-    if not ok: sys.exit(0)
+    if not ok: 
+        print(f"Startup blocked: {reason}")
+        sys.exit(0)
 
-    # Init Theme
+    # Init Theme and Hide Main Window
     root = tb.Window(themename="cyborg")
     root.withdraw()
 
-    # 1. Initialize Secure System (RUNS INSTALLER WIZARD IF NEEDED)
+    # 1. Initialize Secure System (RUNS INSTALLER WIZARD IF KEY IS MISSING)
     crypto_system = SecureMessageSystem()
+    
+    # --- CRITICAL CHECK: ONLY START LISTENER IF KEY IS VALID ---
+    if crypto_system.secret_key is None:
+        # This should only happen if the key load/install failed and the wizard 
+        # unexpectedly closed without providing a key.
+        messagebox.showerror("Security Error", "Cannot start client: Security key is missing or invalid.")
+        sys.exit(1)
     
     # 2. Setup Auto-Start
     ensure_startup_task_safe()
     
     print(f"[SECURE] Running ELM Client v{APP_VERSION}")
 
-    # 3. Start Listener
+    # 3. Start Listener ONLY after key is confirmed
     popup = GlassPopup(root)
     listener = SecureClientListener(root, popup, crypto_system)
     listener.start()
