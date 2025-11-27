@@ -14,11 +14,18 @@ a = Analysis(
         # Required for cryptography to function correctly in the bundled EXE
         'cryptography.hazmat.bindings._rust',
         # Required for pynput (hotkey functionality) on Windows/Linux
+        'cryptography',
+        'cryptography.fernet',
+        'cryptography.hazmat.primitives',
+        'cryptography.hazmat.primitives.kdf',
+        'cryptography.hazmat.primitives.kdf.pbkdf2',
+        'rich',
+        'pynput',
+        'pynput.keyboard',
         'pynput.keyboard._win32', 
         'pynput.keyboard._xorg',
         'pynput.mouse._win32',
         'pynput.mouse._xorg',
-        # Rich library sometimes benefits from explicit imports too, though often not strictly necessary
     ],
     # --- END CRITICAL CHANGES ---
     hookspath=[],
